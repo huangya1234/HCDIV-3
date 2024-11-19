@@ -34,13 +34,14 @@
         }
         .tooltip {
             position: absolute;
-            background-color: white;
+            background-color: rgb(117, 170, 231);
             border: 1px solid #ccc;
             padding: 5px;
             font-size: 12px;
             box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
             pointer-events: none;
             display: none;
+            color: white;
         }
         .chart-description {
             max-width: 1400px;
@@ -53,6 +54,7 @@
             line-height: 1.5;
             text-align: start;
         }
+        
         svg {
             display: block;
         }
@@ -73,13 +75,13 @@
         </p>
     </div>
     <div class="chart-container">
-        <div id="chart" style="width: 900px; height: 600px;"></div>
+        <div id="chart" style="width: 1200px; height: 600px;"></div>
     </div>
     <div class="tooltip"></div>
 
     <script>
-        const margin = { top: 80, right: 100, bottom: 70, left: 70 };
-        const width = 800 - margin.left - margin.right;
+        const margin = { top: 80, right: 100, bottom: 70, left: 200 };
+        const width = 1000 - margin.left - margin.right;
         const height = 500 - margin.top - margin.bottom;
 
         const svg = d3.select("#chart")
@@ -91,7 +93,7 @@
 
         const tooltip = d3.select(".tooltip");
 
-        // 嵌入的 JSON 数据（2022-2024年各房型平均转售价）
+        // Embedded JSON data (Average resale prices for different flat types from 2022 to 2024)
         const flatData = [
             { year: 2022, flatType: "3 ROOM", avgPrice: 350000 },
             { year: 2022, flatType: "4 ROOM", avgPrice: 480000 },
@@ -104,7 +106,7 @@
             { year: 2024, flatType: "5 ROOM", avgPrice: 724444 }
         ];
 
-        // 设置比例尺
+       
         const x0Scale = d3.scaleBand()
             .domain([2022, 2023, 2024])
             .range([0, width])
@@ -124,65 +126,71 @@
             .range(["steelblue", "green", "orange"]);
 
 
-        // 定义箭头标记
+        // Define arrow markers
         svg.append("defs")
                 .append("marker")
                 .attr("id", "arrowhead")
                 .attr("markerWidth", 10)
                 .attr("markerHeight", 10)
-                .attr("refX", 10) // 箭头基准点 X
-                .attr("refY", 5)  // 箭头基准点 Y
+                .attr("refX", 10) 
+                .attr("refY", 5)  
                 .attr("orient", "auto")
                 .append("path")
-                .attr("d", "M 0 0 L 10 5 L 0 10 Z") // 三角形箭头
-                .attr("fill", "#333"); // 箭头颜色
+                .attr("d", "M 0 0 L 10 5 L 0 10 Z") 
+                .attr("fill", "#333"); 
 
-            // 添加 X 轴
+            // Add the X axis
             svg.append("g")
                 .attr("transform", `translate(0,${height})`)
                 .call(d3.axisBottom(x0Scale).tickFormat(d3.format("d")))
                 .selectAll("text")
-                .style("text-anchor", "middle");
+                .style("text-anchor", "middle")
+                .style("font-size", "14px");
+                
 
-            // 为 X 轴添加箭头
+            // Add an arrow to the X axis
             svg.append("line")
                 .attr("x1", 0)
                 .attr("y1", height)
-                .attr("x2", width + 20) // X 轴末端位置（加一点偏移以容纳箭头）
+                .attr("x2", width + 20) 
                 .attr("y2", height)
                 .attr("stroke", "#333")
                 .attr("stroke-width", 1.5)
-                .attr("marker-end", "url(#arrowhead)"); // 应用箭头标记
+                .attr("marker-end", "url(#arrowhead)"); 
 
-            // 添加 X 轴标签
+            // Add X-axis label
             svg.append("text")
                 .attr("class", "axis-label")
                 .attr("x", width / 2)
                 .attr("y", height + 50)
                 .attr("fill", "black")
+                .style("font-size", "20px")
                 .text("Year");
 
-            // 添加 Y 轴
+            // Add the y axis
             svg.append("g")
-                .call(d3.axisLeft(yScale).tickFormat(d3.format("$.2s")));
+                .call(d3.axisLeft(yScale).tickFormat(d3.format("$.2s")))
+                .selectAll("text") 
+                .style("font-size", "12px"); 
 
-            // 为 Y 轴添加箭头
+            // Add an arrow to the y axis
             svg.append("line")
                 .attr("x1", 0)
                 .attr("y1", height)
                 .attr("x2", 0)
-                .attr("y2", -20) // Y 轴末端位置（加一点偏移以容纳箭头）
+                .attr("y2", -20)  
                 .attr("stroke", "#333")
                 .attr("stroke-width", 1.5)
-                .attr("marker-end", "url(#arrowhead)"); // 应用箭头标记
+                .attr("marker-end", "url(#arrowhead)");  
 
-            // 添加 Y 轴标签
+            // Add Y-axis label
             svg.append("text")
                 .attr("class", "axis-label")
                 .attr("transform", "rotate(-90)")
-                .attr("x", -height / 2)
-                .attr("y", -50)
+                .attr("x", -height /1.5)
+                .attr("y", -55)
                 .attr("fill", "black")
+                .style("font-size", "16px")
                 .text("Average Resale Price (SGD)");
                 // Draw bars with animation
         svg.selectAll(".bar-group")
@@ -209,7 +217,7 @@
             .attr("y", d => yScale(d.avgPrice))
             .attr("height", d => height - yScale(d.avgPrice));
         
-        // 添加柱状图标签
+        // Add bar chart labels
         svg.selectAll(".label")
             .data(flatData)
             .enter()
