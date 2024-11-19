@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDB Resale Prices (2022-2024)</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        .chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin-top: 20px;
+        }
+
+        .bar {
+            fill-opacity: 0.8;
+        }
+
+        .bar:hover {
+            fill-opacity: 1;
+        }
+
+        .axis-label {
+            font-size: 14px;
+            fill: #333;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 5px;
+            font-size: 12px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+            display: none;
+        }
+
+        .chart-description {
+            max-width: 1400px;
+            background-color: #eef2f5;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+            margin: 20px auto;
+            font-size: 16px;
+            line-height: 1.5;
+            text-align: start;
+        }
+
+        svg {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>HDB Resale Prices (2022-2024)</h1>
+    <div class="chart-description">
+        <p>
+        1. The chart shows the average resale prices of 3Room, 4Room, and 5Room HDB flats in Singapore for 2022, 2023, and 2024, with prices increasing as the flat size gets larger.  
+        </p>
+       <p>
+        2. Among all years, 5Room flats have the highest resale prices, reaching around 724,444 SGD in 2024, while 3Room flats have the lowest prices.  
+       </p>
+        <p>
+        3. From 2022 to 2024, all flat types show an increase in resale prices, indicating a rising trend in the resale market.  
+        </p>
+       
+    </div>
+    <div class="chart-container">
+        <div id="chart" style="width: 900px; height: 600px;"></div>
+    </div>
+    <div class="tooltip"></div>
+
+    <script>
+        const margin = { top: 80, right: 100, bottom: 70, left: 70 };
+        const width = 800 - margin.left - margin.right;
+        const height = 500 - margin.top - margin.bottom;
+
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const tooltip = d3.select(".tooltip");
+
+        // Load CSV data
+        d3.csv("ResaleflatpricesbasedonregistrationdatefromJan2017onwards.csv").then(data => {
+            // Parse and filter the data
+            const filteredData = data.filter(d => {
+                const year = +d.month.split('-')[0];
+                return year >= 2022 && year <= 2024 && ["3 ROOM", "4 ROOM", "5 ROOM"].includes(d.flat_type);
+            });
+
+            // Aggregate data by year and flat type
+            const aggregatedData = d3.rollups(
+                filteredData,
+                v => d3.mean(v, d => +d.resale_price), // Calculate average price
+                d => +d.month.split('-')[0],          // Group by year
+                d => d.flat_type                      // Then by flat type
+            );
+
+            // Flatten the data for visualization
+            const flatData = [];
+            aggregatedData.forEach(([year, types]) => {
+                types.forEach(([flatType, avgPrice]) => {
+                    flatData.push({ year, flatType, avgPrice });
+                });
+            });
+
+            // Set up scales
+            const x0Scale = d3.scaleBand()
+                .domain([2022, 2023, 2024])
+                .range([0, width])
+                .padding(0.2);
+
+            const x1Scale = d3.scaleBand()
+                .domain(["3 ROOM", "4 ROOM", "5 ROOM"])
+                .range([0, x0Scale.bandwidth()])
+                .padding(0.1);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(flatData, d => d.avgPrice)])
+                .range([height, 0]);
+
+            const colorScale = d3.scaleOrdinal()
+                .domain(["3 ROOM", "4 ROOM", "5 ROOM"])
+                .range(["steelblue", "green", "orange"]);
+            // 定义箭头标记
+            svg.append("defs")
+                .append("marker")
+                .attr("id", "arrowhead")
+                .attr("markerWidth", 10)
+                .attr("markerHeight", 10)
+                .attr("refX", 10) // 箭头基准点 X
+                .attr("refY", 5)  // 箭头基准点 Y
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M 0 0 L 10 5 L 0 10 Z") // 三角形箭头
+                .attr("fill", "#333"); // 箭头颜色
+
+            // 添加 X 轴
+            svg.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x0Scale).tickFormat(d3.format("d")))
+                .selectAll("text")
+                .style("text-anchor", "middle");
+
+            // 为 X 轴添加箭头
+            svg.append("line")
+                .attr("x1", 0)
+                .attr("y1", height)
+                .attr("x2", width + 20) // X 轴末端位置（加一点偏移以容纳箭头）
+                .attr("y2", height)
+                .attr("stroke", "#333")
+                .attr("stroke-width", 1.5)
+                .attr("marker-end", "url(#arrowhead)"); // 应用箭头标记
+
+            // 添加 X 轴标签
+            svg.append("text")
+                .attr("class", "axis-label")
+                .attr("x", width / 2)
+                .attr("y", height + 50)
+                .attr("fill", "black")
+                .text("Year");
+
+            // 添加 Y 轴
+            svg.append("g")
+                .call(d3.axisLeft(yScale).tickFormat(d3.format("$.2s")));
+
+            // 为 Y 轴添加箭头
+            svg.append("line")
+                .attr("x1", 0)
+                .attr("y1", height)
+                .attr("x2", 0)
+                .attr("y2", -20) // Y 轴末端位置（加一点偏移以容纳箭头）
+                .attr("stroke", "#333")
+                .attr("stroke-width", 1.5)
+                .attr("marker-end", "url(#arrowhead)"); // 应用箭头标记
+
+            // 添加 Y 轴标签
+            svg.append("text")
+                .attr("class", "axis-label")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2)
+                .attr("y", -50)
+                .attr("fill", "black")
+                .text("Average Resale Price (SGD)");
+
+            
+               
+           // Draw bars with animation
+        svg.selectAll(".bar-group")
+            .data(flatData)
+            .enter()
+            .append("rect")
+            .attr("class", "bar")
+            .attr("x", d => x0Scale(d.year) + x1Scale(d.flatType))
+            .attr("y", height) // Start at the bottom for animation
+            .attr("width", x1Scale.bandwidth())
+            .attr("height", 0) // Start with height 0 for animation
+            .attr("fill", d => colorScale(d.flatType))
+            .on("mouseover", (event, d) => {
+                tooltip.style("display", "block")
+                    .html(`Year: ${d.year}<br>Flat Type: ${d.flatType}<br>Average Price: $${Math.round(d.avgPrice)}`) // Remove decimals
+                    .style("left", `${event.pageX + 5}px`)
+                    .style("top", `${event.pageY - 28}px`);
+            })
+            .on("mouseout", () => {
+                tooltip.style("display", "none");
+            })
+            .transition() // Add animation
+            .duration(1000)
+            .attr("y", d => yScale(d.avgPrice))
+            .attr("height", d => height - yScale(d.avgPrice));
+
+        // Add labels to bars
+        svg.selectAll(".label")
+            .data(flatData)
+            .enter()
+            .append("text")
+            .attr("class", "label")
+            .attr("x", d => x0Scale(d.year) + x1Scale(d.flatType) + x1Scale.bandwidth() / 2)
+            .attr("y", d => yScale(d.avgPrice) - 5)
+            .text(d => `$${Math.round(d.avgPrice)}`) // Remove decimals here
+            .style("text-anchor", "middle")
+            .style("opacity", 0)
+            .transition()
+            .duration(1000)
+            .style("opacity", 1);
+
+
+            // Add legend
+            const legend = svg.selectAll(".legend")
+                .data(colorScale.domain())
+                .enter()
+                .append("g")
+                .attr("class", "legend")
+                .attr("transform", (d, i) => `translate(${width + 10},${i * 20})`);
+
+            legend.append("rect")
+                .attr("width", + 10)
+                .attr("height", 10)
+                .attr("fill", colorScale);
+
+            legend.append("text")
+                .attr("x",  15)
+                .attr("y", 10)
+                .style("text-anchor", "start")
+                .text(d => d);
+        });
+    </script>
+</body>
+</html>
